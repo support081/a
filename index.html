@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON MARKET</title>
+<style>
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#050816;
+color:white;
+}
+
+nav{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 40px;
+background:#0b1020;
+position:sticky;
+top:0;
+}
+
+.logo{
+font-size:30px;
+font-weight:bold;
+color:#00e5ff;
+}
+
+button{
+cursor:pointer;
+}
+
+.hero{
+padding:80px 40px;
+text-align:center;
+}
+
+.hero h1{
+font-size:70px;
+margin-bottom:20px;
+}
+
+.hero span{
+color:#00e5ff;
+}
+
+.products{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:25px;
+padding:40px;
+}
+
+.card{
+background:#0b1020;
+border-radius:20px;
+overflow:hidden;
+padding-bottom:20px;
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-8px);
+}
+
+.card img{
+width:100%;
+height:240px;
+object-fit:cover;
+}
+
+.card h2{
+padding:0 20px;
+}
+
+.card p{
+padding:0 20px;
+color:#ccc;
+}
+
+.price{
+padding:0 20px;
+font-size:28px;
+font-weight:bold;
+color:#00e5ff;
+}
+
+.actions{
+display:flex;
+gap:10px;
+padding:20px;
+}
+
+.actions button{
+flex:1;
+padding:12px;
+border:none;
+border-radius:12px;
+font-weight:bold;
+}
+
+.view{
+background:#222;
+color:white;
+}
+
+.cartbtn{
+background:#00e5ff;
+color:black;
+}
+
+#cart{
+position:fixed;
+right:20px;
+bottom:20px;
+width:320px;
+background:#0b1020;
+padding:20px;
+border-radius:20px;
+}
+
+.cart-item{
+margin-bottom:10px;
+border-bottom:1px solid #222;
+padding-bottom:10px;
+}
+
+.modal{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.8);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.modal-content{
+background:#0b1020;
+padding:30px;
+border-radius:20px;
+max-width:500px;
+width:90%;
+text-align:center;
+}
+
+.modal-content img{
+width:100%;
+border-radius:15px;
+margin-bottom:20px;
+}
+
+.close{
+margin-top:20px;
+padding:12px 20px;
+background:#ff0077;
+color:white;
+border:none;
+border-radius:12px;
+}
+</style>
+</head>
+<body>
+
+<nav>
+<div class="logo">NEON MARKET</div>
+<div>
+<button class="cartbtn" onclick="toggleCart()">Cart (<span id="count">0</span>)</button>
+</div>
+</nav>
+
+<section class="hero">
+<h1>BUILD YOUR <span>DREAM SETUP</span></h1>
+<p>Premium gaming gear for futuristic gamers.</p>
+</section>
+
+<section class="products" id="products"></section>
+
+<div id="cart">
+<h2>Cart</h2>
+<div id="cartItems"></div>
+<h3>Total: $<span id="total">0</span></h3>
+</div>
+
+<div class="modal" id="modal">
+<div class="modal-content">
+<img id="modalImg">
+<h2 id="modalName"></h2>
+<p id="modalDesc"></p>
+<div class="price" id="modalPrice"></div>
+<button class="close" onclick="closeModal()">Close</button>
+</div>
+</div>
+
+<script>
+const products = [
+{
+name:'Gaming Keyboard',
+price:129,
+image:'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?q=80&w=1200&auto=format&fit=crop',
+description:'RGB mechanical gaming keyboard.'
+},
+{
+name:'Gaming Headset',
+price:179,
+image:'https://images.unsplash.com/photo-1585298723682-7115561c51b7?q=80&w=1200&auto=format&fit=crop',
+description:'Immersive surround sound headset.'
+},
+{
+name:'Gaming Mouse',
+price:89,
+image:'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=1200&auto=format&fit=crop',
+description:'Ultra lightweight gaming mouse.'
+}
+]
+
+const productsDiv = document.getElementById('products')
+const cartItems = document.getElementById('cartItems')
+let cart = []
+
+products.forEach((product,index)=>{
+productsDiv.innerHTML += `
+<div class="card">
+<img src="${product.image}">
+<h2>${product.name}</h2>
+<p>${product.description}</p>
+<div class="price">$${product.price}</div>
+<div class="actions">
+<button class="view" onclick="viewProduct(${index})">View</button>
+<button class="cartbtn" onclick="addToCart(${index})">Add</button>
+</div>
+</div>
+`
+})
+
+function addToCart(index){
+cart.push(products[index])
+renderCart()
+}
+
+function renderCart(){
+cartItems.innerHTML=''
+let total=0
+
+cart.forEach(item=>{
+total += item.price
+cartItems.innerHTML += `
+<div class="cart-item">
+${item.name} - $${item.price}
+</div>
+`
+})
+
+document.getElementById('total').innerText = total
+
+document.getElementById('count').innerText = cart.length
+}
+
+function viewProduct(index){
+const p = products[index]
+
+document.getElementById('modal').style.display='flex'
+document.getElementById('modalImg').src = p.image
+document.getElementById('modalName').innerText = p.name
+document.getElementById('modalDesc').innerText = p.description
+document.getElementById('modalPrice').innerText = '$'+p.price
+}
+
+function closeModal(){
+document.getElementById('modal').style.display='none'
+}
+
+function toggleCart(){
+const cart = document.getElementById('cart')
+if(cart.style.display==='none'){
+cart.style.display='block'
+}else{
+cart.style.display='none'
+}
+}
+</script>
+
+</body>
+</html>
