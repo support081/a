@@ -197,6 +197,14 @@ body{
 }
 .pcard .stars{font-size:9px;color:var(--accent-2);margin-top:3px;}
 .pcard .stars span{color:var(--txt-faint);}
+.card-add{
+  width:100%;margin-top:8px;padding:7px 0;
+  background:var(--bg-3);border:1px solid var(--accent);
+  border-radius:6px;color:var(--accent);
+  font-size:11px;font-weight:900;cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.card-add:active{background:var(--accent);color:#fff;}
 
 /* 그리드 상품 */
 .grid{
@@ -426,6 +434,16 @@ body{
   color:var(--txt);font-size:14px;cursor:pointer;
 }
 .qty span{width:34px;text-align:center;font-size:12px;}
+.ci-del{
+  align-self:flex-start;background:none;border:none;
+  color:var(--txt-faint);font-size:15px;cursor:pointer;
+  padding:2px 4px;
+}
+.cart-count-line{
+  font-size:13px;color:var(--txt-dim);padding:6px 0 2px;
+}
+.cart-count-line b{color:var(--accent);font-size:15px;}
+.cart-item .ci-thumb{cursor:pointer;}
 /* 자동체크 다크패턴 */
 .consent-box{
   margin-top:18px;background:var(--bg-3);border:1px solid var(--line);
@@ -495,7 +513,7 @@ body{
 }
 .my-cell{
   background:var(--bg-3);border:1px solid var(--line);border-radius:10px;
-  padding:14px 4px;text-align:center;
+  padding:14px 4px;text-align:center;cursor:pointer;
 }
 .my-cell .num{font-size:18px;font-weight:900;}
 .my-cell .lbl{font-size:10px;color:var(--txt-dim);margin-top:4px;}
@@ -784,7 +802,7 @@ body{
       <div class="section">
         <div class="sec-head">
           <div class="sec-title">🔥 실시간 <em>인기</em> 상품</div>
-          <div class="sec-more">전체보기 ›</div>
+          <div class="sec-more" onclick="openList('실시간 인기 상품')">전체보기 ›</div>
         </div>
         <div class="h-scroll" id="hotScroll"></div>
       </div>
@@ -793,7 +811,7 @@ body{
       <div class="section">
         <div class="sec-head">
           <div class="sec-title"><em>타임세일</em> · 곧 종료</div>
-          <div class="sec-more">전체보기 ›</div>
+          <div class="sec-more" onclick="openList('타임세일')">전체보기 ›</div>
         </div>
         <div class="h-scroll" id="saleScroll"></div>
       </div>
@@ -802,7 +820,7 @@ body{
       <div class="section">
         <div class="sec-head">
           <div class="sec-title">신상품</div>
-          <div class="sec-more">전체보기 ›</div>
+          <div class="sec-more" onclick="openList('신상품')">전체보기 ›</div>
         </div>
         <div class="grid" id="newGrid"></div>
       </div>
@@ -816,11 +834,11 @@ body{
         <div class="cnt" id="listCnt">총 248개 · 인기순</div>
       </div>
       <div class="filter-row">
-        <div class="chip on">인기순</div>
-        <div class="chip">신상순</div>
-        <div class="chip">낮은가격</div>
-        <div class="chip">할인율</div>
-        <div class="chip">리뷰많은</div>
+        <div class="chip on" onclick="sortList(this,'popular')">인기순</div>
+        <div class="chip" onclick="sortList(this,'new')">신상순</div>
+        <div class="chip" onclick="sortList(this,'low')">낮은가격</div>
+        <div class="chip" onclick="sortList(this,'disc')">할인율</div>
+        <div class="chip" onclick="sortList(this,'review')">리뷰많은</div>
       </div>
       <div class="section" style="padding-top:14px">
         <div class="grid" id="listGrid"></div>
@@ -842,24 +860,24 @@ body{
     <div class="page" id="myPage">
       <div class="my-page">
         <div class="my-profile">
-          <div class="my-av">J</div>
+          <div class="my-av">토</div>
           <div>
             <div class="my-name">팔달린토끼3574 님</div>
             <div class="my-grade">★ VIP 등급 · 적립금 2,400P</div>
           </div>
         </div>
         <div class="my-grid">
-          <div class="my-cell"><div class="num">3</div><div class="lbl">주문내역</div></div>
-          <div class="my-cell"><div class="num">12</div><div class="lbl">찜한상품</div></div>
-          <div class="my-cell"><div class="num" style="color:var(--accent-2)">5</div><div class="lbl">쿠폰함</div></div>
-          <div class="my-cell"><div class="num">2.4K</div><div class="lbl">적립금</div></div>
+          <div class="my-cell" onclick="goPage('cartPage')"><div class="num" id="myOrderNum">3</div><div class="lbl">주문내역</div></div>
+          <div class="my-cell" onclick="toast('찜한 상품 12개')"><div class="num">12</div><div class="lbl">찜한상품</div></div>
+          <div class="my-cell" onclick="showAdPopup()"><div class="num" style="color:var(--accent-2)">5</div><div class="lbl">쿠폰함</div></div>
+          <div class="my-cell" onclick="toast('적립금 2,400P 보유 중')"><div class="num">2.4K</div><div class="lbl">적립금</div></div>
         </div>
         <div class="my-list">
-          <div class="my-row"><span>주문 / 배송 조회</span><span class="arr">›</span></div>
-          <div class="my-row"><span>찜한 상품</span><span class="arr">›</span></div>
-          <div class="my-row"><span>쿠폰함 <span style="color:var(--accent)">· 오늘 만료 2장</span></span><span class="arr">›</span></div>
-          <div class="my-row"><span>회원정보 수정</span><span class="arr">›</span></div>
-          <div class="my-row"><span>고객센터</span><span class="arr">›</span></div>
+          <div class="my-row" onclick="goPage('cartPage')"><span>주문 / 배송 조회</span><span class="arr">›</span></div>
+          <div class="my-row" onclick="toast('찜한 상품 12개')"><span>찜한 상품</span><span class="arr">›</span></div>
+          <div class="my-row" onclick="showAdPopup()"><span>쿠폰함 <span style="color:var(--accent)">· 오늘 만료 2장</span></span><span class="arr">›</span></div>
+          <div class="my-row" onclick="toast('회원정보 수정 페이지 준비 중')"><span>회원정보 수정</span><span class="arr">›</span></div>
+          <div class="my-row" onclick="toast('고객센터 1588-0000')"><span>고객센터</span><span class="arr">›</span></div>
         </div>
       </div>
       <div style="height:24px"></div>
@@ -871,29 +889,29 @@ body{
         <div class="sp-block">
           <div class="sp-title">최근 검색어</div>
           <div class="sp-tags">
-            <div class="sp-tag">오버핏 후드</div>
-            <div class="sp-tag">카고팬츠</div>
-            <div class="sp-tag">발마칸 코트</div>
+            <div class="sp-tag" onclick="openList('오버핏 후드')">오버핏 후드</div>
+            <div class="sp-tag" onclick="openList('카고팬츠')">카고팬츠</div>
+            <div class="sp-tag" onclick="openList('발마칸 코트')">발마칸 코트</div>
           </div>
         </div>
         <div class="sp-block">
           <div class="sp-title">추천 검색어</div>
           <div class="sp-tags">
-            <div class="sp-tag">Y2K 셋업</div>
-            <div class="sp-tag">블록코어</div>
-            <div class="sp-tag">스니커즈</div>
-            <div class="sp-tag">바람막이</div>
-            <div class="sp-tag">비니</div>
+            <div class="sp-tag" onclick="openList('Y2K 셋업')">Y2K 셋업</div>
+            <div class="sp-tag" onclick="openList('블록코어')">블록코어</div>
+            <div class="sp-tag" onclick="openList('스니커즈')">스니커즈</div>
+            <div class="sp-tag" onclick="openList('바람막이')">바람막이</div>
+            <div class="sp-tag" onclick="openList('비니')">비니</div>
           </div>
         </div>
         <div class="sp-block">
           <div class="sp-title">🔥 실시간 인기 검색어</div>
           <div class="sp-rank">
-            <div class="sp-r">데님 와이드팬츠 <span class="up">▲ 2</span></div>
-            <div class="sp-r">크롭 집업 <span class="up">▲ 5</span></div>
-            <div class="sp-r">로고 맨투맨 <span class="up">NEW</span></div>
-            <div class="sp-r">패딩 베스트 <span class="up">▲ 1</span></div>
-            <div class="sp-r">청키 스니커즈 <span class="up">▲ 3</span></div>
+            <div class="sp-r" onclick="openList('데님 와이드팬츠')">데님 와이드팬츠 <span class="up">▲ 2</span></div>
+            <div class="sp-r" onclick="openList('크롭 집업')">크롭 집업 <span class="up">▲ 5</span></div>
+            <div class="sp-r" onclick="openList('로고 맨투맨')">로고 맨투맨 <span class="up">NEW</span></div>
+            <div class="sp-r" onclick="openList('패딩 베스트')">패딩 베스트 <span class="up">▲ 1</span></div>
+            <div class="sp-r" onclick="openList('청키 스니커즈')">청키 스니커즈 <span class="up">▲ 3</span></div>
           </div>
         </div>
       </div>
@@ -1095,6 +1113,7 @@ function cardHTML(p,hot){
       <span class="was">${won(p.was)}</span>
     </div>
     <div class="stars">★★★★★ <span>${p.rate} (${p.reviews})</span></div>
+    <button class="card-add" onclick="quickAdd(event,'${p.id}')">+ 담기</button>
   </div>`;
 }
 function renderHome(){
@@ -1149,11 +1168,40 @@ function showPage(id){
 function goPage(id){showPage(id);closeMenu();}
 function goHome(){showPage('homePage');closeMenu();}
 
+let currentListName='후드티';
+let currentSort='popular';
+const SORT_LABEL={popular:'인기순',new:'신상순',low:'낮은가격순',disc:'할인율순',review:'리뷰많은순'};
+
+function sortedList(){
+  const arr=[...LIST];
+  if(currentSort==='low')arr.sort((a,b)=>a.now-b.now);
+  else if(currentSort==='disc')arr.sort((a,b)=>b.disc-a.disc);
+  else if(currentSort==='review')arr.sort((a,b)=>b.reviews-a.reviews);
+  else if(currentSort==='new')arr.reverse();
+  return arr;
+}
+function paintList(){
+  document.getElementById('listTitle').textContent=currentListName;
+  document.getElementById('listCnt').textContent=
+    '총 '+(120+currentListName.length*23)+'개 · '+SORT_LABEL[currentSort];
+  document.getElementById('listGrid').innerHTML=
+    sortedList().map(p=>cardHTML(p,false)).join('');
+}
 function openList(name){
-  document.getElementById('listTitle').textContent=name;
-  document.getElementById('listCnt').textContent='총 '+(120+name.length*23)+'개 · 인기순';
-  document.getElementById('listGrid').innerHTML=LIST.map(p=>cardHTML(p,false)).join('');
+  currentListName=name;
+  currentSort='popular';
+  // 필터 칩 첫 번째만 활성화
+  const chips=document.querySelectorAll('#listPage .chip');
+  chips.forEach((c,i)=>c.classList.toggle('on',i===0));
+  paintList();
   showPage('listPage');closeMenu();
+}
+function sortList(el,key){
+  document.querySelectorAll('#listPage .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  currentSort=key;
+  paintList();
+  document.getElementById('scroll').scrollTop=0;
 }
 
 /* =========================================================
@@ -1161,6 +1209,7 @@ function openList(name){
    ========================================================= */
 function openDetail(id){
   const p=ALL[id];if(!p)return;
+  currentDetailId=id;
   const sizes=['S','M','L','XL'];
   document.getElementById('detailScroll').innerHTML=`
     <div class="detail-img" style="background:linear-gradient(150deg,${p.sw[0]},${p.sw[1]})">
@@ -1244,27 +1293,51 @@ function pickOpt(el,group){
 /* =========================================================
    장바구니
    ========================================================= */
-let cartCount=3;
+// 실제 장바구니 상태: {id, size, qty}
+let cart=[
+  {id:'h0',size:'M',qty:1},
+  {id:'s2',size:'L',qty:1},
+  {id:'n1',size:'M',qty:1}
+];
+function cartTotalQty(){return cart.reduce((a,c)=>a+c.qty,0);}
+function updateBadge(){
+  document.getElementById('cartBadge').textContent=cartTotalQty();
+}
 function renderCart(){
-  const items=[HOT[0],SALE[2],NEW[1]];
+  if(cart.length===0){
+    document.getElementById('cartBody').innerHTML=`
+      <div style="text-align:center;padding:80px 20px;color:var(--txt-dim)">
+        <div style="font-size:44px">🛒</div>
+        <div style="margin-top:14px;font-size:14px">장바구니가 비어 있어요</div>
+        <button class="chip on" style="margin-top:18px;padding:10px 20px"
+          onclick="goHome()">쇼핑하러 가기</button>
+      </div>`;
+    return;
+  }
   let sum=0;
-  const rows=items.map(p=>{
-    sum+=p.now;
+  const rows=cart.map((it,idx)=>{
+    const p=ALL[it.id];if(!p)return '';
+    sum+=p.now*it.qty;
     return `<div class="cart-item">
-      <div class="ci-thumb" style="background:linear-gradient(150deg,${p.sw[0]},${p.sw[1]})">
-        <div class="ph">SL</div></div>
+      <div class="ci-thumb" style="background:linear-gradient(150deg,${p.sw[0]},${p.sw[1]})"
+        onclick="openDetail('${p.id}')">
+        <div class="ph">SSC</div></div>
       <div class="ci-info">
         <div class="ci-name">${p.name}</div>
-        <div class="ci-opt">옵션: M / 블랙</div>
-        <div class="ci-price"><span class="disc">${p.disc}%</span> ${won(p.now)}</div>
+        <div class="ci-opt">옵션: ${it.size} / 블랙</div>
+        <div class="ci-price"><span class="disc">${p.disc}%</span> ${won(p.now*it.qty)}</div>
         <div class="qty">
-          <button>−</button><span>1</span><button>+</button>
+          <button onclick="changeQty(${idx},-1)">−</button>
+          <span>${it.qty}</span>
+          <button onclick="changeQty(${idx},1)">+</button>
         </div>
       </div>
+      <button class="ci-del" onclick="removeFromCart(${idx})">✕</button>
     </div>`;
   }).join('');
   const ship=sum>=30000?0:3000;
   document.getElementById('cartBody').innerHTML=`
+    <div class="cart-count-line">담은 상품 <b>${cart.length}</b>개</div>
     ${rows}
     <!-- 다크패턴: 자동 체크 동의 -->
     <div class="consent-box">
@@ -1292,15 +1365,46 @@ function renderCart(){
     </div>
     <button class="pay-btn" onclick="goSurvey()">${won(sum+ship)} 결제하기</button>
     <div class="pay-note">※ 실제 구매는 없으며, 결제하기를 누르면 구글폼 링크로 이동됩니다.</div>
-    <button class="pay-cancel">쇼핑 계속하기</button>
+    <button class="pay-cancel" onclick="goHome()">쇼핑 계속하기</button>
     <div style="height:24px"></div>`;
+}
+function changeQty(idx,delta){
+  if(!cart[idx])return;
+  cart[idx].qty+=delta;
+  if(cart[idx].qty<1)cart[idx].qty=1;
+  renderCart();updateBadge();
+}
+function removeFromCart(idx){
+  cart.splice(idx,1);
+  renderCart();updateBadge();
+  toast('상품을 삭제했어요');
 }
 function goSurvey(){
   window.open('https://forms.gle/NBh5zM6a4UdHjxH87','_blank');
 }
+// 현재 보고 있는 상품을 장바구니에 추가
+let currentDetailId=null;
 function addToCart(){
-  cartCount++;
-  document.getElementById('cartBadge').textContent=cartCount;
+  if(!currentDetailId){toast('상품을 선택해 주세요');return;}
+  const size=document.querySelector('#sizeOpts .opt.on');
+  const sz=size?size.textContent:'M';
+  const exist=cart.find(c=>c.id===currentDetailId&&c.size===sz);
+  if(exist){
+    exist.qty++;
+    toast('수량을 1개 추가했어요 🛒');
+  }else{
+    cart.push({id:currentDetailId,size:sz,qty:1});
+    toast('장바구니에 담았어요 🛒');
+  }
+  updateBadge();renderCart();
+}
+// 카드에서 바로 담기
+function quickAdd(ev,id){
+  ev.stopPropagation();
+  const exist=cart.find(c=>c.id===id&&c.size==='M');
+  if(exist)exist.qty++;
+  else cart.push({id:id,size:'M',qty:1});
+  updateBadge();renderCart();
   toast('장바구니에 담았어요 🛒');
 }
 
@@ -1401,7 +1505,7 @@ function startAdTimer(){
 
 // 1) 진입 즉시 쿠키 팝업
 window.addEventListener('load',()=>{
-  renderHome();renderCats();renderCart();
+  renderHome();renderCats();renderCart();updateBadge();
   setTimeout(()=>{
     document.getElementById('cookieOverlay').classList.add('show');
   },600);
