@@ -600,6 +600,9 @@ body{
 .rf-submit{width:100%;margin-top:18px;padding:15px;border:none;border-radius:10px;background:var(--accent-2);
   color:#1a0606;font-size:16px;font-weight:900;cursor:pointer;font-family:inherit;}
 .rf-note{text-align:center;font-size:10px;color:var(--txt-faint);margin-top:10px;}
+
+.detail-imgtrack svg{min-width:100%;height:100%;display:block;}
+.review .r-photos .rp svg{position:absolute;inset:0;width:100%;height:100%;}
 </style>
 </head>
 <body>
@@ -784,21 +787,6 @@ body{
     </div>
   </div>
 
-  <!-- 인트로 안내 (광고 컨셉) -->
-  <div class="overlay" id="introOverlay">
-    <div class="intro-modal">
-      <div class="intro-adbar"><span>AD · 안내</span><button onclick="closeIntro()">✕</button></div>
-      <div class="intro-body">
-        <div class="intro-ic">📢</div>
-        <h3>잠깐! 여기는 <em>모의 쇼핑몰</em>이에요</h3>
-        <p>이 사이트는 <b>다크패턴(소비자를 헷갈리게 하는 디자인)</b>을 직접 체험해 보기 위한 <b>연구용 모의 사이트</b>예요. 실제 결제나 개인정보 수집은 <b>전혀 이루어지지 않습니다.</b></p>
-        <p>팝업·할인 타이머·광고 같은 걸 <b>진짜 쇼핑하듯 자유롭게</b> 둘러보세요. 충분히 둘러본 뒤 <b>'결제하기' 버튼</b>을 누르면 느낀 점을 적는 <b>설문조사</b>로 연결됩니다.</p>
-        <label class="intro-check" onclick="toggleDontShow(this)"><span class="cbox2"></span> 오늘 다시 보지 않기</label>
-        <button class="intro-cta" onclick="closeIntro()">둘러보기 시작하기</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 쿠키 팝업 -->
   <div class="overlay" id="cookieOverlay">
     <div class="cookie-modal">
@@ -924,14 +912,241 @@ function pick(r,arr){return arr[Math.floor(r()*arr.length)];}
 function won(n){return n.toLocaleString('ko-KR')+'원';}
 
 /* =========================================================
-   1. 이미지 — LoremFlickr(키워드) → Picsum → 그라데이션
-   사진이 키워드와 자꾸 어긋나면 USE_KEYWORD를 false로 바꾸세요.
+   1. 상품 이미지 — 내장 일러스트(기본) / Picsum / 키워드 실사
+   IMG_MODE:
+   'illust'  : 내장 SVG 일러스트 (안전·오프라인·기본값)
+   'picsum'  : 실사 사진 (안전하지만 옷과 무관한 풍경/사물)
+   'keyword' : 옷 키워드 실사 (무료 공개사진 풀이라 무관하거나
+               부적절한 사진이 섞일 수 있어 권장하지 않음)
    ========================================================= */
-const USE_KEYWORD=true;
+const IMG_MODE='illust';
+const ART_PAL=['#3a3a42','#454b58','#6b3a3a','#7a6438','#37624f','#525260','#7d3f3f','#3f4878','#2a2a32','#645a49','#8a5232','#33556b'];
+const ART_LN='rgba(255,255,255,.30)';
+const ART_SHADOW='rgba(0,0,0,.35)';
+function shade(hex,f){
+  const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  if(f<=1){r=Math.round(r*f);g=Math.round(g*f);b=Math.round(b*f);}
+  else{r=Math.round(r+(255-r)*(f-1));g=Math.round(g+(255-g)*(f-1));b=Math.round(b+(255-b)*(f-1));}
+  const c=x=>Math.max(0,Math.min(255,x));
+  return '#'+((1<<24)+(c(r)<<16)+(c(g)<<8)+c(b)).toString(16).slice(1);
+}
+const KIND={'반팔':'tee','티셔츠':'tee','긴팔':'long','셔츠':'shirt','니트':'knit','후드티':'hoodie','후드':'hoodie',
+ '맨투맨':'sweat','집업':'zip','가디건':'cardigan','바람막이':'wind','블루종':'bomber','점퍼':'bomber','패딩':'puffer',
+ '자켓':'jacket','코트':'coat','와이드팬츠':'wide','카고팬츠':'cargo','데님':'denim','청바지':'denim',
+ '트레이닝팬츠':'track','조거팬츠':'jogger','슬랙스':'slacks','반바지':'shorts','스커트':'skirt',
+ '스니커즈':'sneaker','러닝화':'runner','부츠':'boot','로퍼':'loafer','슬리퍼':'slide','샌들':'sandal',
+ '볼캡':'cap','모자':'cap','비니':'beanie','목걸이':'necklace','반지':'ring','가방':'backpack','백팩':'backpack',
+ '크로스백':'crossbody','토트백':'tote','양말':'socks'};
+const K_SHOES=['sneaker','runner','boot','loafer','slide','sandal'];
+const K_ACC=['cap','beanie','necklace','ring','backpack','crossbody','tote','socks'];
+const ART_PRINT_P=0.8;
+function hslToHex(h,s,l){
+  s/=100;l/=100;
+  const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  const to=x=>Math.round(255*x).toString(16).padStart(2,'0');
+  return '#'+to(f(0))+to(f(8))+to(f(4));
+}
+function makeFill(uid,r,c1,c2,acc){
+  const roll=r();
+  const lineC=r()<.4?acc:c2;
+  if(roll<0.42)return{defs:'',fill:c1};
+  if(roll<0.58){ // 컬러블록 (배색)
+    const t=(0.3+r()*0.35).toFixed(2);
+    const dir=r()<.6?'x1="0" y1="0" x2="0" y2="1"':(r()<.5?'x1="0" y1="0" x2="1" y2="0"':'x1="0" y1="0" x2="1" y2="1"');
+    return{defs:`<linearGradient id="f${uid}" ${dir}><stop offset="${t}" stop-color="${acc}"/><stop offset="${t}" stop-color="${c1}"/></linearGradient>`,fill:`url(#f${uid})`};
+  }
+  if(roll<0.72){ // 가로 스트라이프
+    const hgt=(7+Math.floor(r()*7));const th=(1.4+r()*2.2).toFixed(1);
+    return{defs:`<pattern id="f${uid}" patternUnits="userSpaceOnUse" width="12" height="${hgt}"><rect width="12" height="${hgt}" fill="${c1}"/><rect width="12" height="${th}" fill="${lineC}"/></pattern>`,fill:`url(#f${uid})`};
+  }
+  if(roll<0.82){ // 세로 스트라이프
+    const w=(7+Math.floor(r()*6));const th=(1.3+r()*1.8).toFixed(1);
+    return{defs:`<pattern id="f${uid}" patternUnits="userSpaceOnUse" width="${w}" height="12"><rect width="${w}" height="12" fill="${c1}"/><rect width="${th}" height="12" fill="${lineC}"/></pattern>`,fill:`url(#f${uid})`};
+  }
+  if(roll<0.91){ // 도트
+    const g=(8+Math.floor(r()*5));const rad=(1.1+r()*1.1).toFixed(1);
+    return{defs:`<pattern id="f${uid}" patternUnits="userSpaceOnUse" width="${g}" height="${g}"><rect width="${g}" height="${g}" fill="${c1}"/><circle cx="${g/2}" cy="${g/2}" r="${rad}" fill="${lineC}"/></pattern>`,fill:`url(#f${uid})`};
+  }
+  // 체크/그리드
+  const g=(9+Math.floor(r()*6));const th=(1.2+r()*1.4).toFixed(1);
+  return{defs:`<pattern id="f${uid}" patternUnits="userSpaceOnUse" width="${g}" height="${g}"><rect width="${g}" height="${g}" fill="${c1}"/><rect width="${g}" height="${th}" fill="${lineC}" opacity=".8"/><rect width="${th}" height="${g}" fill="${lineC}" opacity=".8"/></pattern>`,fill:`url(#f${uid})`};
+}
+function printFor(kind,r,c3,acc){
+  if(!['tee','sweat','hoodie'].includes(kind))return '';
+  if(r()>=ART_PRINT_P)return '';
+  const v=Math.floor(r()*6);
+  const dx=(r()*8-4).toFixed(1),dy=(r()*5-2.5).toFixed(1);
+  const col=r()<.5?c3:acc;
+  let s='';
+  if(v===0)s=`<rect x="51" y="52" width="18" height="12" rx="2" fill="${col}"/>`;
+  else if(v===1)s=`<circle cx="60" cy="58" r="6.5" fill="${col}"/>`;
+  else if(v===2)s=`<rect x="51" y="53" width="18" height="3.2" rx="1.4" fill="${col}"/><rect x="54" y="59" width="12" height="3.2" rx="1.4" fill="${col}"/>`;
+  else if(v===3)s=`<path d="M60 50 L67 58 L60 66 L53 58Z" fill="${col}"/>`;
+  else if(v===4)s=`<path d="M51 55 Q60 65 69 55" stroke="${col}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  else s=`<path d="M62 48 L54 60 L59 60 L57 69 L66 56 L61 56Z" fill="${col}"/>`;
+  return `<g transform="translate(${dx} ${dy})" opacity=".92">${s}</g>`;
+}
+
+function topBase(c1,long){
+  return long
+   ? `<path d="M40 32 L52 26 Q60 33 68 26 L80 32 L92 41 L89 79 L79 76 L79 94 L41 94 L41 76 L31 79 L28 41 Z" fill="${c1}"/>`
+   : `<path d="M40 32 L52 26 Q60 33 68 26 L80 32 L93 45 L83 55 L78 49 L78 94 L42 94 L42 49 L37 55 L27 45 Z" fill="${c1}"/>`;
+}
+function neck(c2){return `<path d="M52 26 Q60 35 68 26 Q60 31 52 26Z" fill="${c2}"/>`;}
+function seams(ln){return `<path d="M41 36 L41 76 M79 36 L79 76" stroke="${ln}" stroke-width="1" fill="none" opacity=".6"/>`;}
+function pantsBase(c1,c2){return `<path d="M42 30 H78 L83 98 H64 L60 56 L56 98 H37Z" fill="${c1}"/><rect x="42" y="26" width="36" height="7" rx="2" fill="${c2}"/>`;}
+
+function drawKind(kind,c1,c2,c3,ln,detail,prn){
+  const D=detail;
+  switch(kind){
+    case 'tee': return topBase(c1,false)+neck(c2)+(D&&prn?prn:``);
+    case 'long': return topBase(c1,true)+neck(c2)+seams(ln);
+    case 'shirt': return topBase(c1,true)+seams(ln)
+      +(D?`<path d="M52 26 L60 37 L49 33Z" fill="${c2}"/><path d="M68 26 L60 37 L71 33Z" fill="${c2}"/><path d="M60 37 L60 94" stroke="${ln}" stroke-width="1"/><g fill="${c2}"><circle cx="60" cy="46" r="1.4"/><circle cx="60" cy="58" r="1.4"/><circle cx="60" cy="70" r="1.4"/><circle cx="60" cy="82" r="1.4"/></g>`:neck(c2));
+    case 'knit': return topBase(c1,true)+neck(c2)
+      +`<g stroke="${ln}" stroke-width="1" opacity=".5"><path d="M43 44 H77 M43 52 H77 M43 60 H77 M43 68 H77 M43 76 H77 M43 84 H77"/></g>`
+      +`<rect x="42" y="88" width="36" height="6" fill="${c2}"/>`;
+    case 'sweat': return topBase(c1,true)+`<path d="M50 25 Q60 36 70 25 L67 23 Q60 31 53 23Z" fill="${c2}"/>`
+      +`<rect x="42" y="88" width="36" height="6" fill="${c2}"/><rect x="31" y="73" width="10" height="6" fill="${c2}"/><rect x="79" y="73" width="10" height="6" fill="${c2}"/>`
+      +(D&&prn?prn:``);
+    case 'hoodie': return topBase(c1,true)+`<path d="M45 29 Q60 12 75 29 Q60 38 45 29Z" fill="${c2}"/>`
+      +(D?`<path d="M56 34 L55 47 M64 34 L65 47" stroke="${ln}" stroke-width="1.4"/><path d="M49 68 L71 68 L67 86 L53 86Z" fill="${c2}"/>`:``)+(D&&prn?prn:``);
+    case 'zip': return topBase(c1,true)+`<path d="M50 26 L52 20 L68 20 L70 26 Q60 32 50 26Z" fill="${c2}"/>`
+      +`<path d="M60 30 L60 94" stroke="${ln}" stroke-width="2"/>`+(D?`<rect x="58.6" y="40" width="2.8" height="6" rx="1" fill="${c3}"/><rect x="31" y="73" width="10" height="6" fill="${c2}"/><rect x="79" y="73" width="10" height="6" fill="${c2}"/>`:``);
+    case 'cardigan': return topBase(c1,true)
+      +`<path d="M52 26 L60 46 L57 48 L50 30Z" fill="${c2}"/><path d="M68 26 L60 46 L63 48 L70 30Z" fill="${c2}"/><path d="M60 46 L60 94" stroke="${ln}" stroke-width="1"/>`
+      +(D?`<g fill="${c2}"><circle cx="60" cy="54" r="1.6"/><circle cx="60" cy="66" r="1.6"/><circle cx="60" cy="78" r="1.6"/></g>`:``)
+      +`<rect x="42" y="89" width="36" height="5" fill="${c2}" opacity=".7"/>`;
+    case 'wind': return topBase(c1,true)+`<path d="M50 26 L51 19 L69 19 L70 26 Q60 32 50 26Z" fill="${c2}"/>`
+      +`<path d="M60 28 L60 94" stroke="${ln}" stroke-width="1.8"/>`
+      +(D?`<path d="M45 58 L55 62 M65 62 L75 58" stroke="${ln}" stroke-width="1.6"/><path d="M28 41 L45 50 M92 41 L75 50" stroke="${c3}" stroke-width="2" opacity=".7"/>`:``);
+    case 'bomber': return topBase(c1,true)+`<rect x="50" y="21" width="20" height="7" rx="3.5" fill="${c2}"/>`
+      +`<path d="M60 30 L60 88" stroke="${ln}" stroke-width="1.8"/>`
+      +`<rect x="42" y="88" width="36" height="6" fill="${c2}"/><rect x="31" y="73" width="10" height="6" fill="${c2}"/><rect x="79" y="73" width="10" height="6" fill="${c2}"/>`
+      +(D?`<path d="M46 60 L54 64 M66 64 L74 60" stroke="${ln}" stroke-width="1.4"/>`:``);
+    case 'puffer': return `<path d="M36 32 L52 24 Q60 31 68 24 L84 32 L92 44 L90 92 Q60 101 30 92 L28 44Z" fill="${c1}"/>`
+      +`<rect x="47" y="19" width="26" height="9" rx="4.5" fill="${c2}"/>`
+      +`<g stroke="${c2}" stroke-width="2.6" fill="none" opacity=".9"><path d="M31 48 Q60 54 89 48 M30 60 Q60 66 90 60 M30 72 Q60 78 90 72 M31 84 Q60 90 89 84"/></g>`
+      +(D?`<path d="M60 28 L60 96" stroke="${ln}" stroke-width="1.6"/>`:``);
+    case 'jacket': return topBase(c1,true)
+      +`<path d="M52 26 L60 42 L47 36Z" fill="${c2}"/><path d="M68 26 L60 42 L73 36Z" fill="${c2}"/>`
+      +(D?`<g fill="${c2}"><circle cx="60" cy="52" r="1.7"/><circle cx="60" cy="64" r="1.7"/></g><rect x="45" y="74" width="11" height="4" rx="1" fill="${c2}"/><rect x="64" y="74" width="11" height="4" rx="1" fill="${c2}"/>`:``);
+    case 'coat': return `<path d="M40 32 L52 26 Q60 33 68 26 L80 32 L92 41 L89 82 L80 79 L80 106 L40 106 L40 79 L31 82 L28 41Z" fill="${c1}"/>`
+      +`<path d="M52 26 L60 44 L46 37Z" fill="${c2}"/><path d="M68 26 L60 44 L74 37Z" fill="${c2}"/>`
+      +(D?`<rect x="42" y="64" width="36" height="6" rx="2" fill="${c2}"/><path d="M60 44 L60 104" stroke="${ln}" stroke-width="1"/>`:``);
+    case 'wide': return `<path d="M40 30 H80 L86 98 H62 L60 60 L58 98 H34Z" fill="${c1}"/><rect x="40" y="26" width="40" height="7" rx="2" fill="${c2}"/>`+(D?`<path d="M60 33 L60 44" stroke="${ln}"/>`:``);
+    case 'cargo': return pantsBase(c1,c2)
+      +`<rect x="36.5" y="58" width="12.5" height="15" rx="2" fill="${c2}"/><rect x="71" y="58" width="12.5" height="15" rx="2" fill="${c2}"/>`
+      +(D?`<path d="M36.5 63 H49 M71 63 H83.5" stroke="${ln}" stroke-width="1"/>`:``);
+    case 'denim': return pantsBase(c1,c2)
+      +`<path d="M46 36 L44 96 M74 36 L76 96" stroke="${ln}" stroke-width="1" stroke-dasharray="2 2" opacity=".8"/>`
+      +(D?`<path d="M44 40 Q52 44 46 51 M76 40 Q68 44 74 51 M60 33 L60 44" stroke="${ln}" stroke-width="1" fill="none"/>`:``);
+    case 'track': return pantsBase(c1,c2)
+      +`<path d="M45 34 L41 96 M75 34 L79 96" stroke="${c3}" stroke-width="3"/>`;
+    case 'jogger': return `<path d="M42 30 H78 L80 90 H66 L61 58 L56 90 H40Z" fill="${c1}"/><rect x="42" y="26" width="36" height="7" rx="2" fill="${c2}"/>`
+      +`<rect x="64" y="88" width="15" height="7" rx="2" fill="${c2}"/><rect x="40" y="88" width="15" height="7" rx="2" fill="${c2}"/>`
+      +(D?`<path d="M48 40 Q50 46 47 50 M72 40 Q70 46 73 50" stroke="${ln}" fill="none"/>`:``);
+    case 'slacks': return pantsBase(c1,c2)+`<path d="M49 37 L47 96 M71 37 L73 96" stroke="${ln}" stroke-width="1" opacity=".7"/>`;
+    case 'shorts': return `<path d="M42 30 H78 L82 66 H63 L60 48 L57 66 H38Z" fill="${c1}"/><rect x="42" y="26" width="36" height="7" rx="2" fill="${c2}"/>`+(D?`<path d="M60 33 L60 44" stroke="${ln}"/>`:``);
+    case 'skirt': return `<path d="M45 30 H75 L86 78 H34Z" fill="${c1}"/><rect x="45" y="26" width="30" height="7" rx="2" fill="${c2}"/>`
+      +(D?`<path d="M60 33 L60 76" stroke="${ln}" opacity=".6"/><path d="M36 72 L84 72" stroke="${ln}" opacity=".4"/>`:``);
+    case 'sneaker': return `<path d="M22 84 Q60 94 98 82 L98 90 Q60 100 22 92Z" fill="${c2}"/>`
+      +`<path d="M25 84 Q28 62 50 58 Q78 54 96 76 L96 84 Q60 92 25 84Z" fill="${c1}"/>`
+      +`<path d="M25 84 Q26 72 36 67 Q34 80 25 84Z" fill="${c3}"/>`
+      +`<g stroke="${ln}" stroke-width="1.6"><path d="M48 66 L60 62 M50 71 L62 67 M52 76 L64 72"/></g>`;
+    case 'runner': return `<path d="M22 84 Q60 96 98 82 L98 91 Q60 102 22 93Z" fill="${c2}"/>`
+      +`<path d="M25 84 Q28 62 50 58 Q78 54 96 76 L96 84 Q60 92 25 84Z" fill="${c1}"/>`
+      +`<path d="M38 80 L70 64 L75 70 L44 86Z" fill="${c3}" opacity=".9"/>`
+      +`<g stroke="${ln}" stroke-width="1.5"><path d="M50 66 L61 62 M52 71 L63 67"/></g>`;
+    case 'boot': return `<path d="M40 32 H66 L66 72 Q84 74 92 83 L92 90 H36Z" fill="${c1}"/>`
+      +`<rect x="34" y="88" width="60" height="8" rx="3" fill="${c2}"/>`
+      +`<g stroke="${ln}" stroke-width="1.4"><path d="M44 42 H62 M44 50 H62 M44 58 H62"/></g>`;
+    case 'loafer': return `<path d="M26 80 Q40 64 62 64 Q86 64 96 79 L96 86 Q60 94 26 88Z" fill="${c1}"/>`
+      +`<rect x="52" y="64" width="18" height="6" rx="2" fill="${c2}"/>`
+      +`<path d="M24 86 Q60 96 98 84 L98 89 Q60 99 24 91Z" fill="${c2}"/>`;
+    case 'slide': return `<path d="M26 82 H94 Q99 88 92 92 H28 Q21 88 26 82Z" fill="${c2}"/>`
+      +`<path d="M34 82 Q60 56 86 82Z" fill="${c1}"/>`+(D?`<path d="M42 76 Q60 62 78 76" stroke="${ln}" fill="none"/>`:``);
+    case 'sandal': return `<path d="M26 82 H94 Q99 88 92 92 H28 Q21 88 26 82Z" fill="${c2}"/>`
+      +`<path d="M38 82 Q60 64 82 82 M48 82 Q60 73 72 82" stroke="${c1}" stroke-width="4.5" fill="none"/>`;
+    case 'cap': return `<path d="M32 64 Q60 32 88 64Z" fill="${c1}"/>`
+      +`<path d="M28 64 H92 Q95 74 80 71 L33 69 Q25 68 28 64Z" fill="${c2}"/>`
+      +`<circle cx="60" cy="40" r="2.4" fill="${c2}"/>`+(D?`<path d="M60 34 L60 63 M45 42 L50 63 M75 42 L70 63" stroke="${ln}" stroke-width="1" opacity=".6"/>`:``);
+    case 'beanie': return `<path d="M36 70 Q36 34 60 32 Q84 34 84 70Z" fill="${c1}"/>`
+      +`<rect x="34" y="66" width="52" height="13" rx="5" fill="${c2}"/>`
+      +`<g stroke="${ln}" stroke-width="1" opacity=".6"><path d="M40 68 V78 M48 67 V79 M56 66 V79 M64 66 V79 M72 67 V79 M80 68 V78"/></g>`
+      +(D?`<circle cx="60" cy="30" r="4" fill="${c2}"/>`:``);
+    case 'necklace': return `<circle cx="60" cy="50" r="26" fill="none" stroke="${c1}" stroke-width="2.6" stroke-dasharray="1.6 3"/>`
+      +`<circle cx="60" cy="76" r="3" fill="${c2}"/><path d="M60 79 L53 87 L60 97 L67 87Z" fill="${c3}"/>`;
+    case 'ring': return `<circle cx="60" cy="68" r="17" fill="none" stroke="${c1}" stroke-width="7"/>`
+      +`<path d="M51 44 L69 44 L74 52 L60 63 L46 52Z" fill="${c3}"/>`+(D?`<path d="M54 48 L58 48" stroke="#fff" stroke-width="1.6" opacity=".8"/>`:``);
+    case 'backpack': return `<path d="M40 44 Q34 60 40 80 M80 44 Q86 60 80 80" stroke="${c2}" stroke-width="5" fill="none"/>`
+      +`<rect x="38" y="32" width="44" height="54" rx="13" fill="${c1}"/>`
+      +`<path d="M52 32 Q60 22 68 32" stroke="${c2}" stroke-width="4" fill="none"/>`
+      +`<rect x="46" y="58" width="28" height="22" rx="7" fill="${c2}"/>`
+      +(D?`<path d="M42 48 H78" stroke="${ln}" stroke-width="1.4" stroke-dasharray="3 2"/>`:``);
+    case 'crossbody': return `<path d="M48 52 L88 16" stroke="${c2}" stroke-width="3.4"/>`
+      +`<rect x="40" y="50" width="40" height="28" rx="7" fill="${c1}"/>`
+      +`<path d="M40 50 H80 L75 64 H45Z" fill="${c2}"/>`+(D?`<circle cx="60" cy="64" r="2.4" fill="${c3}"/>`:``);
+    case 'tote': return `<path d="M46 46 Q46 28 58 28 M74 46 Q74 28 62 28" stroke="${c2}" stroke-width="4.5" fill="none"/>`
+      +`<path d="M36 44 H84 L78 96 H42Z" fill="${c1}"/>`
+      +(D?`<path d="M38 52 H82" stroke="${ln}" stroke-width="1.2" opacity=".6"/>`:``);
+    case 'socks': return `<g transform="translate(12 4)" opacity=".75"><path d="M46 28 H62 V58 Q62 78 46 80 Q32 80 32 68 Q32 58 42 56 L46 54Z" fill="${c2}"/></g>`
+      +`<path d="M46 26 H62 V56 Q62 78 46 80 Q31 80 31 67 Q31 57 42 55 L46 52Z" fill="${c1}"/>`
+      +`<rect x="45" y="24" width="18" height="8" rx="2" fill="${c2}"/>`
+      +(D?`<path d="M48 38 H60 M48 44 H60" stroke="${ln}" stroke-width="1.2"/>`:``);
+    default: return topBase(c1,false)+neck(c2);
+  }
+}
+function swatch(kind,c1,c2,ln){
+  let pat;
+  if(['knit','beanie','socks','cardigan','sweat'].includes(kind))
+    pat=`<g stroke="${ln}" stroke-width="1.4" opacity=".55"><path d="M28 36 H92 M28 46 H92 M28 56 H92 M28 66 H92 M28 76 H92 M28 86 H92"/></g>`;
+  else if(kind==='denim')
+    pat=`<g stroke="${ln}" stroke-width="1" opacity=".5"><path d="M28 40 L44 24 M28 56 L60 24 M28 72 L76 24 M28 88 L92 24 M40 92 L92 40 M56 92 L92 56 M72 92 L92 72"/></g>`;
+  else if(kind==='puffer')
+    pat=`<g stroke="${c2}" stroke-width="2" opacity=".8"><path d="M28 44 H92 M28 62 H92 M28 80 H92 M46 26 V94 M64 26 V94 M82 26 V94"/></g>`;
+  else
+    pat=`<g stroke="${ln}" stroke-width="1" opacity=".35"><path d="M28 48 L52 24 M28 72 L76 24 M36 92 L92 36 M60 92 L92 60"/></g>`;
+  return `<rect x="24" y="24" width="72" height="72" rx="14" fill="${c1}" stroke="${c2}" stroke-width="2"/>`+pat
+    +`<circle cx="84" cy="84" r="5" fill="${c2}"/>`;
+}
+function svgArt(p,idx,cls,extra){
+  idx=idx||0;cls=cls||'';
+  const r=rng(p.id+'-art-'+(extra||''));
+  const h0=Math.floor(r()*360);
+  const c1=hslToHex(h0,14+Math.floor(r()*28),24+Math.floor(r()*20));
+  const c2=shade(c1,.66+r()*.14);
+  const c3=shade(c1,1.28+r()*.3);
+  const acc=hslToHex((h0+120+Math.floor(r()*140))%360,14+Math.floor(r()*28),24+Math.floor(r()*20));
+  const hb=hashStr(p.id+'-'+(extra||''));
+  const bgA=`hsl(${hb%360} 18% 16%)`;const bgB=`hsl(${(hb+40)%360} 20% 9%)`;
+  const kind=KIND[p.sub]||'tee';
+  const uid='u'+(hashStr(p.id+'|'+idx+'|'+(extra||''))%1e8);
+  const bgDir=['x2="1" y2="1"','x2="0" y2="1"','x2="1" y2="0"','x2="1" y2=".4"'][Math.floor(r()*4)];
+  let art,extraDefs='';
+  if(idx===2){art=swatch(kind,c1,r()<.5?c2:acc,ART_LN);}
+  else{
+    const fl=makeFill(uid,r,c1,c2,acc);extraDefs=fl.defs;
+    const prn=printFor(kind,r,c3,acc);
+    const zoomKind=K_SHOES.includes(kind)||K_ACC.includes(kind);
+    const body=drawKind(kind,fl.fill,c2,c3,ART_LN,idx===0,prn);
+    const tag=(idx===1&&!zoomKind)?`<rect x="55" y="28" width="10" height="4" rx="1.5" fill="${c2}"/>`:``;
+    const sx=(0.94+r()*0.12).toFixed(3),sy=(0.94+r()*0.12).toFixed(3);
+    const inner=`<ellipse cx="60" cy="101" rx="${(28+r()*10).toFixed(0)}" ry="5.5" fill="${ART_SHADOW}"/>`+body+tag;
+    const jit=`<g transform="translate(60 62) scale(${sx} ${sy}) translate(-60 -62)">${inner}</g>`;
+    art=(idx===1&&zoomKind)?`<g transform="translate(60 62) scale(1.22) translate(-60 -62)">${jit}</g>`:jit;
+  }
+  return `<svg class="thumb-img ${cls}" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+<defs><linearGradient id="${uid}" x1="0" y1="0" ${bgDir}>
+<stop offset="0" stop-color="${bgA}"/><stop offset="1" stop-color="${bgB}"/></linearGradient>${extraDefs}</defs>
+<rect width="120" height="120" fill="url(#${uid})"/>${art}</svg>`;
+}
 function imgTag(p,idx,cls){
   idx=idx||0;cls=cls||'';
+  if(IMG_MODE==='illust')return svgArt(p,idx,cls);
   const seed=(hashStr(p.id)+idx*131)%100000;
-  const url=USE_KEYWORD
+  const url=IMG_MODE==='keyword'
     ? `https://loremflickr.com/600/600/${p.kw}?lock=${seed}`
     : `https://picsum.photos/seed/${p.id}-${idx}/600/600`;
   return `<img class="thumb-img ${cls}" src="${url}" data-seed="${p.id}-${idx}" data-t="0"
@@ -940,7 +1155,15 @@ function imgTag(p,idx,cls){
 function imgErr(img){
   const t=img.dataset.t;
   if(t==='0'){img.dataset.t='1';img.src=`https://picsum.photos/seed/${img.dataset.seed}/600/600`;}
-  else{img.style.display='none';} // 그라데이션 노출
+  else{img.style.display='none';}
+}
+function revShot(rv,k){
+  const p=ALL[revState.pid];
+  if(IMG_MODE==='illust')return svgArt(p,0,'',rv.seed+'-'+k);
+  const url=IMG_MODE==='keyword'
+    ? `https://loremflickr.com/200/200/clothing?lock=${(hashStr(rv.seed)+k*7)%9999}`
+    : `https://picsum.photos/seed/${rv.seed}-${k}/200/200`;
+  return `<img src="${url}" data-seed="${rv.seed}-${k}" data-t="0" onerror="imgErr(this)" loading="lazy">`;
 }
 
 /* =========================================================
@@ -1264,10 +1487,9 @@ function genReviews(p,start,count){
 function reviewItemHTML(rv){
   let photos='';
   if(rv.hasPhoto){
-    const grad='linear-gradient(150deg,#2a2a32,#16161c)';
     const n=1+(hashStr(rv.seed)%2);
     photos='<div class="r-photos">';
-    for(let k=0;k<n;k++)photos+=`<div class="rp" style="background:${grad}"><img src="https://loremflickr.com/200/200/clothing?lock=${(hashStr(rv.seed)+k*7)%9999}" data-seed="${rv.seed}-${k}" data-t="0" onerror="imgErr(this)" loading="lazy"></div>`;
+    for(let k=0;k<n;k++)photos+=`<div class="rp">${revShot(rv,k)}</div>`;
     photos+='</div>';
   }
   const dateTxt=rv.daysAgo<30?rv.daysAgo+'일 전':Math.floor(rv.daysAgo/30)+'개월 전';
@@ -1667,21 +1889,11 @@ function startAdTimer(){clearInterval(adTimerInt);let s=299;
    18. 다크패턴 시퀀스 (쿠키→광고동의→전면광고→강제이동)
    ========================================================= */
 let consentGranted=false;
-let dontShowIntro=false;
 window.addEventListener('load',()=>{
   seedCart();renderHome();renderCats();buildBannerDots();updateBadge();updateWishNum();updateCouponNum();
-  setTimeout(()=>document.getElementById('introOverlay').classList.add('show'),300);
+  setTimeout(()=>document.getElementById('cookieOverlay').classList.add('show'),600);
   startSocialProof();
 });
-function toggleDontShow(el){
-  const b=el.querySelector('.cbox2');dontShowIntro=!dontShowIntro;
-  b.classList.toggle('on',dontShowIntro);b.textContent=dontShowIntro?'✓':'';
-}
-function closeIntro(){
-  document.getElementById('introOverlay').classList.remove('show');
-  if(dontShowIntro)toast('오늘 하루 이 안내를 다시 보지 않아요');
-  setTimeout(()=>document.getElementById('cookieOverlay').classList.add('show'),500);
-}
 function acceptCookies(){
   document.getElementById('cookieOverlay').classList.remove('show');
   document.getElementById('cookieReaskOverlay').classList.remove('show');
@@ -1841,6 +2053,7 @@ function renderRewardForm(){
       <label class="rf-agree" onclick="toggleConsent(this)"><span class="cbox checked">✓</span>
         <span style="font-size:10px;color:var(--txt-faint);line-height:1.5">[필수] 경품 발송을 위한 개인정보 수집·이용 및 제휴사 제3자 제공에 동의합니다</span></label>
       <button class="rf-submit" onclick="submitRewardForm()">경품 받기</button>
+      <div class="rf-note">※ 모의 사이트이므로 입력한 정보는 어디에도 저장되지 않습니다.</div>
     </div>`;
   const skip=document.querySelector('.dl-skip');if(skip)skip.style.display='none';
 }
